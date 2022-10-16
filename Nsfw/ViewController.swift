@@ -80,7 +80,7 @@ class ViewController: UIViewController {
                       let sfw = predictions?.first(where: {$0.category == .safe})
                 else { return }
                 var imageToShow: UIImage? = image
-                if nsfw.confidence > 90 || nsfw.confidence > sfw.confidence {
+                if nsfw.confidence > sfw.confidence {
                     imageToShow = self.blurImage(image: image, amount: 30)
                 }
                 self.imageView.image = imageToShow
