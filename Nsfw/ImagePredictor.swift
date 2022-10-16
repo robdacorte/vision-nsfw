@@ -5,9 +5,8 @@
 //  Created by Rob on 15/10/22.
 //
 
-import Foundation
-import Vision
 import UIKit
+import Vision
 
 enum Category: String {
     case safe = "SFW"
@@ -32,23 +31,7 @@ final class ImagePredictor {
         guard let image = photo.cgImage else { fatalError() }
         let handler = VNImageRequestHandler(cgImage: image, orientation: orientation)
         
-        let imageClassificationRequest = VNCoreMLRequest(model: imageClassifier) { req, error in
-            //Heres where magic happens
-            if let error = error {
-                print("Vision image classification error...\n\n\(error.localizedDescription)")
-                return
-            }
-            
-            if req.results == nil {
-                print("Vision request had no results.")
-                return
-            }
-            
-            guard let observations = req.results as? [VNClassificationObservation] else { return }
-            
-            let predictions = observations.map { Prediction(category: Category(rawValue: $0.identifier)!, confidence: $0.confidence)}
-            print(predictions)
-        }
+        let imageClassificationRequest = VNCoreMLRequest(model: imageClassifier, completionHandler: classificationCompletionHandler)
         
         predictionsMap[imageClassificationRequest] = completion
         let requests: [VNRequest] = [imageClassificationRequest]
@@ -58,6 +41,33 @@ final class ImagePredictor {
             print("there was an error \(error.localizedDescription)")
         }
     }
+    
+    private func classificationCompletionHandler(request: VNRequest, error: Error?) {
+        //Here's where magic happens
+        
+        //First, we get the completion handler from the dictionary
+        guard let completion = predictionsMap[request] else { return }
+        var predictions: [Prediction] = []
+        
+        defer {
+            completion(predictions)
+        }
+        
+        if let error = error {
+            print("Vision image classification error...\n\n\(error.localizedDescription)")
+            return
+        }
+        
+        if request.results == nil {
+            print("Vision request had no results.")
+            return
+        }
+        
+        guard let observations = request.results as? [VNClassificationObservation] else { return }
+        
+        predictions = observations.map { Prediction(category: Category(rawValue: $0.identifier)!, confidence: $0.confidence)}
+    }
+    
 }
 
 
